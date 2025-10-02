@@ -1,42 +1,48 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export default function SignupForm() {
-  const sp = useSearchParams(); // client-safe
+  const sp = useSearchParams();
   const prefillEmail = sp.get("email") ?? "";
   const ref = sp.get("ref") ?? "";
 
   return (
-    <div className="w-full max-w-md space-y-4">
-      <h2 className="text-xl font-semibold">Signup</h2>
+    <div className="w-full max-w-md card p-8 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-black text-white grid place-items-center font-bold">W</div>
+        <div className="font-semibold">Wavo</div>
+        <div className="ml-auto text-xs text-gray-500">Signup</div>
+      </div>
 
-      <form className="space-y-3">
-        <label className="block text-sm">
-          <span className="block mb-1">Email</span>
+      <h2 className="text-xl font-semibold">Get started</h2>
+      <p className="text-sm text-gray-600">Tell us how to reach you. You can paste a referral code if you have one.</p>
+
+      <form className="space-y-4">
+        <label className="label">Email
           <input
             defaultValue={prefillEmail}
             placeholder="you@label.com"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-gray-900"
+            className="input"
+            type="email"
           />
         </label>
 
-        <label className="block text-sm">
-          <span className="block mb-1">Referral Code</span>
+        <label className="label">Referral Code
           <input
             defaultValue={ref}
             placeholder="optional"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-gray-900"
+            className="input"
           />
         </label>
 
-        <button
-          type="submit"
-          className="mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-gray-900 px-4 text-sm font-medium hover:bg-gray-900 hover:text-white"
-        >
-          Continue
-        </button>
+        <button type="submit" className="btn btn-primary w-full">Continue</button>
       </form>
+
+      <div className="text-center">
+        <Link href="/" className="text-sm text-gray-600 hover:underline">← Back to home</Link>
+      </div>
     </div>
   );
 }
