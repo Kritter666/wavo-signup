@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 export default function ThanksPage({ searchParams }: { searchParams?: { email?: string } }) {
   const email = searchParams?.email ?? "";
-
   return (
     <main className="min-h-screen grid place-items-center p-6">
       <div className="w-full max-w-md card p-8 space-y-4 text-center">

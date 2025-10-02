@@ -1,48 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
 
-import { NextResponse } from "next/server";
-let kv: any = null;
-
-// Lazy import @vercel/kv only if env is configured (avoids build issues)
 async function getKV() {
-  if (kv) return kv;
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    const mod = await import("@vercel/kv");
-    kv = mod;
-    return kv;
+  try {
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      const mod = await import("@vercel/kv");
+      return mod.kv;
+    }
+  } catch (e) {
+    // ignore; fall back to console
   }
   return null;
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { email, ref, utm, consentMarketing, ts } = body ?? {};
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ ok: false, error: "email required" }, { status: 400 });
-    }
+type Payload = {
+  role: string;
+  fullName: string;
+  email: string;
+  org?: string;
+  primaryArtist?: string;
+  location?: string;
+  website?: string;
+  instagram?: string;
+  spotify?: string;
+  soundcloud?: string;
+  useCases: string[];
+  notes?: string;
+  marketingConsent: boolean;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  referrer?: string | null;
+  enriched?: Record<string, unknown>;
+  derived?: { subjectSlug?: string; domain?: string };
+};
 
+export async function POST(req: NextRequest) {
+  try {
+    const body = (await req.json()) as Payload;
+    if (!body.fullName || !body.email || !body.marketingConsent) {
+      return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
+    }
+    const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const record = {
-      email,
-      ref: ref ?? "",
-      utm: utm ?? {},
-      consentMarketing: !!consentMarketing,
+      id,
+      createdAt: new Date().toISOString(),
+      ...body,
       userAgent: req.headers.get("user-agent") ?? "",
-      createdAt: ts ? new Date(ts).toISOString() : new Date().toISOString(),
+      ip: req.headers.get("x-forwarded-for") ?? "",
     };
 
-    // Try KV (optional)
-    const KV = await getKV();
-    if (KV?.kv) {
-      const key = `signup:${Date.now()}:${Math.random().toString(36).slice(2,8)}`;
-      await KV.kv.hset(key, record as any);
-    } else {
-      // Fallback: just log (visible in Vercel logs)
-      console.log("SIGNUP_RECORD", record);
+    const kv = await getKV();
+    if (kv) {
+      await kv.hset(id, record as any);
+      await kv.lpush("leads", id);
+      return NextResponse.json({ ok: true, id, storage: "kv" }, { status: 200 });
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (e) {
+    console.log("LEAD_RECORD", JSON.stringify(record));
+    return NextResponse.json({ ok: true, id, storage: "log" }, { status: 200 });
+  } catch (e: any) {
     console.error("API_SIGNUP_ERROR", e);
-    return NextResponse.json({ ok: false }, { status: 200 }); // still let client redirect
+    return NextResponse.json({ ok: false, error: e?.message || "Unknown error" }, { status: 500 });
   }
 }
