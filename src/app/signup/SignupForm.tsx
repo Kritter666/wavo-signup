@@ -1,12 +1,51 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function SignupForm() {
   const sp = useSearchParams();
-  const prefillEmail = sp.get("email") ?? "";
-  const ref = sp.get("ref") ?? "";
+  const router = useRouter();
+  const [email, setEmail] = useState(sp.get("email") ?? "");
+  const [ref, setRef] = useState(sp.get("ref") ?? "");
+  const [loading, setLoading] = useState(false);
+  const utm = {
+    source: sp.get("utm_source") ?? "",
+    medium: sp.get("utm_medium") ?? "",
+    campaign: sp.get("utm_campaign") ?? "",
+  };
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          ref,
+          utm,
+          consentMarketing: true,
+          ts: Date.now(),
+        }),
+      });
+
+      // Even if KV isn't configured, API returns ok:true.
+      if (res.ok) {
+        router.push(`/thanks?email=${encodeURIComponent(email)}`);
+      } else {
+        // Fallback route if something odd happens
+        router.push(`/thanks`);
+      }
+    } catch (err) {
+      router.push(`/thanks`);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="w-full max-w-md card p-8 space-y-5">
@@ -19,30 +58,31 @@ export default function SignupForm() {
       <h2 className="text-xl font-semibold">Get started</h2>
       <p className="text-sm text-gray-600">Tell us how to reach you. You can paste a referral code if you have one.</p>
 
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={onSubmit}>
         <label className="label">Email
           <input
-            defaultValue={prefillEmail}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="you@label.com"
             className="input"
             type="email"
+            required
           />
         </label>
 
         <label className="label">Referral Code
           <input
-            defaultValue={ref}
+            value={ref}
+            onChange={(e) => setRef(e.target.value)}
             placeholder="optional"
             className="input"
           />
         </label>
 
-        <button type="submit" className="btn btn-primary w-full">Continue</button>
+        <button type="submit" disabled={loading} className="btn btn-primary w-full">
+          {loading ? "Sending…" : "Continue"}
+        </button>
       </form>
-
-      <div className="text-center">
-        <Link href="/" className="text-sm text-gray-600 hover:underline">← Back to home</Link>
-      </div>
     </div>
   );
 }
