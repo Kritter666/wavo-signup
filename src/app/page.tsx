@@ -11,9 +11,8 @@ export default function Home() {
         </div>
 
         <div>
-          <h1 className="text-2xl font-semibold">Wavo Signup Playground</h1>
+          <h1 className="text-2xl font-semibold">Wavo Signup</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Try a simple assistant-friendly signup flow. We’ll center everything and keep it clean.
           </p>
         </div>
 
