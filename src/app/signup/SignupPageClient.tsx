@@ -206,7 +206,8 @@ export default function SignupPageClient() {
                   onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}
                 >
                   <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                  <SelectContent>
+                  {/* >>> change: force solid popover background */}
+                  <SelectContent className="bg-white dark:bg-neutral-900 border border-border shadow-lg">
                     {(["Artist", "Producer", "Manager", "Label", "Other"] as Role[]).map((r) => (
                       <SelectItem key={r} value={r}>{r}</SelectItem>
                     ))}
