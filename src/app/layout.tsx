@@ -1,9 +1,15 @@
+import "./globals.css";
+import type { Metadata } from "next";
 
-export const metadata = { title: "Wavo Signup" };
+export const metadata: Metadata = {
+  title: "Wavo Signup Playground",
+  description: "Assistant-led signup playground",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body style={{minHeight:"100vh",display:"grid",placeItems:"center",margin:0}}>{children}</body>
+      <body className="min-h-screen bg-white text-gray-900">{children}</body>
     </html>
   );
 }

@@ -1,12 +1,21 @@
 
 import Link from "next/link";
-export default function Page() {
+
+export default function Home() {
   return (
-    <main style={{textAlign:"center"}}>
-      <h1 style={{fontSize:24, fontWeight:600, marginBottom:12}}>Wavo Signup Playground</h1>
-      <Link href="/signup" style={{border:"1px solid #000", padding:"8px 14px", borderRadius:8, display:"inline-block"}}>
-        Go to Signup
-      </Link>
+    <main className="min-h-screen grid place-items-center p-6">
+      <div className="w-full max-w-lg space-y-4">
+        <h1 className="text-2xl font-semibold">Wavo Signup Playground</h1>
+        <p className="text-sm text-gray-600">
+          Try a simple assistant-friendly signup flow that can read URL params.
+        </p>
+        <Link
+          href="/signup"
+          className="inline-flex h-10 items-center rounded-lg border border-gray-900 px-4 text-sm font-medium hover:bg-gray-900 hover:text-white"
+        >
+          Go to Signup
+        </Link>
+      </div>
     </main>
   );
 }
