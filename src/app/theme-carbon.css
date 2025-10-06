@@ -1,0 +1,71 @@
+@layer base {
+  :root {
+    --background: 0 0% 96%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 221 100% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 98%;
+    --secondary-foreground: 0 0% 12%;
+
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 221 100% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 356 80% 49%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 221 100% 53%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 221 100% 63%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 221 100% 55%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 24%;
+    --input: 0 0% 24%;
+    --ring: 221 100% 63%;
+  }
+
+  [role="listbox"],
+  div[data-radix-select-content],
+  [data-radix-select-content] {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+}
