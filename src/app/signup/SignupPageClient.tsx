@@ -1,10 +1,9 @@
 
-// src/app/signup/SignupPageClient.tsx
 "use client";
 
-import Brand from "@/components/Brand";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Brand from "@/components/Brand";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,148 +173,144 @@ export default function SignupPageClient() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Branded header */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <Brand className="h-6 text-foreground" />
-          <span className="text-xs text-muted-foreground">Signup</span>
-        </div>
-        <div className="mt-3">
-          <div className="text-2xl font-semibold">Wavo Signup</div>
-          <div className="text-sm text-muted-foreground">
+    <main className="min-h-screen grid place-items-start md:place-items-center px-4 py-10">
+      <div className="w-full max-w-4xl">
+        <div className="text-center mb-6">
+          <Brand className="h-10 mx-auto mb-3" />
+          <h2 className="text-2xl font-semibold">Wavo Signup</h2>
+          <p className="text-sm text-muted-foreground">
             Tell us who you are. We’ll personalize your workspace and keep you posted.
-          </div>
+          </p>
         </div>
-      </div>
 
-      <form onSubmit={onSubmit} className="grid gap-4">
-        <Card>
-          <CardContent className="p-4 grid gap-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Role</div>
-                <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
-                  <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                  {/* Make the dropdown solid in both themes */}
-                  <SelectContent className="bg-white dark:bg-neutral-900 border border-border shadow-lg">
-                    {(["Artist", "Producer", "Manager", "Label", "Other"] as Role[]).map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <Card>
+            <CardContent className="p-4 grid gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Role</div>
+                  <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
+                    <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                    <SelectContent className="bg-card text-card-foreground border border-border shadow-lg">
+                      {(["Artist", "Producer", "Manager", "Label", "Other"] as Role[]).map((r) => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Full name</div>
+                  <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="e.g., Alex Chen" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Email</div>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@company.com" />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Organization (optional)</div>
+                  <Input value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} placeholder="e.g., Atlantic Records" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium">Primary artist / subject</div>
+                    <Badge variant="secondary">Boosts AI assist</Badge>
+                  </div>
+                  <Input value={form.primaryArtist} onChange={(e) => setForm({ ...form, primaryArtist: e.target.value })} placeholder="e.g., Metro Boomin" />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Location</div>
+                  <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City, Country" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Website</div>
+                  <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Instagram</div>
+                  <Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@handle or link" />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">Spotify</div>
+                  <Input value={form.spotify} onChange={(e) => setForm({ ...form, spotify: e.target.value })} placeholder="Artist/Team profile link" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">SoundCloud (optional)</div>
+                  <Input value={form.soundcloud} onChange={(e) => setForm({ ...form, soundcloud: e.target.value })} placeholder="https://soundcloud.com/…" />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">How can we help?</div>
+                  <div className="flex flex-wrap gap-2">
+                    {USE_CASES.map((uc) => (
+                      <label key={uc} className={`flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer ${form.useCases.includes(uc) ? "bg-muted" : ""}`}>
+                        <Checkbox checked={form.useCases.includes(uc)} onCheckedChange={() => toggleUseCase(uc)} />
+                        <span className="text-sm">{uc}</span>
+                      </label>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Full name</div>
-                <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="e.g., Alex Chen" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Email</div>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@company.com" />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Organization (optional)</div>
-                <Input value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} placeholder="e.g., Atlantic Records" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium">Primary artist / subject</div>
-                  <Badge variant="secondary">Boosts AI assist</Badge>
-                </div>
-                <Input value={form.primaryArtist} onChange={(e) => setForm({ ...form, primaryArtist: e.target.value })} placeholder="e.g., Metro Boomin" />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Location</div>
-                <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City, Country" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Website</div>
-                <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Instagram</div>
-                <Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@handle or link" />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">Spotify</div>
-                <Input value={form.spotify} onChange={(e) => setForm({ ...form, spotify: e.target.value })} placeholder="Artist/Team profile link" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">SoundCloud (optional)</div>
-                <Input value={form.soundcloud} onChange={(e) => setForm({ ...form, soundcloud: e.target.value })} placeholder="https://soundcloud.com/…" />
-              </div>
-              <div className="grid gap-2">
-                <div className="text-sm font-medium">How can we help?</div>
-                <div className="flex flex-wrap gap-2">
-                  {USE_CASES.map((uc) => (
-                    <label key={uc} className={`flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer ${form.useCases.includes(uc) ? "bg-muted" : ""}`}>
-                      <Checkbox checked={form.useCases.includes(uc)} onCheckedChange={() => toggleUseCase(uc)} />
-                      <span className="text-sm">{uc}</span>
-                    </label>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-2">
-              <div className="text-sm font-medium">Notes (optional)</div>
-              <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Tell us more about your current workflow or goals" />
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Checkbox id="consent" checked={form.marketingConsent} onCheckedChange={(v) => setForm({ ...form, marketingConsent: !!v })} />
-              <label htmlFor="consent" className="text-sm text-muted-foreground">
-                I agree to be contacted about Wavo products, features, and research. You can opt out anytime.
-              </label>
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={aiAssist} disabled={!form.fullName && !form.primaryArtist}>
-                AI Assist — Prefill
-              </Button>
-              <Button type="submit" disabled={!canSubmit}>
-                {submitting ? "Submitting…" : "Join Waitlist"}
-              </Button>
-              {error && <span className="text-destructive text-sm">{error}</span>}
-            </div>
-
-            {form.enriched && (
-              <div className="rounded-xl border p-3 text-xs">
-                <div className="font-medium mb-1">Assistant reasoning</div>
-                <div>Type guess: {form.enriched.typeGuess} ({Math.round((form.enriched.confidence || 0) * 100)}% conf)</div>
-                <div>Manager guess: {form.enriched.managerGuess}</div>
-                <div>Works: {form.enriched.notableWorks?.join(", ")}</div>
-                <div>Provenance: {form.enriched.provenance?.join(" → ")}</div>
+              <div className="grid gap-2">
+                <div className="text-sm font-medium">Notes (optional)</div>
+                <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Tell us more about your current workflow or goals" />
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        <Tabs defaultValue="privacy">
-          <TabsList>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            <TabsTrigger value="learn">How we’ll use this</TabsTrigger>
-          </TabsList>
-          <TabsContent value="privacy" className="text-sm text-muted-foreground">
-            We’ll only use your info to evaluate access and personalize your experience. We’ll never sell your data.
-          </TabsContent>
-          <TabsContent value="learn" className="text-sm text-muted-foreground">
-            We connect this info to our music/IP graph and your connectors during onboarding to reduce setup friction and improve recommendations.
-          </TabsContent>
-        </Tabs>
-      </form>
-    </div>
+              <div className="flex items-start gap-3">
+                <Checkbox id="consent" checked={form.marketingConsent} onCheckedChange={(v) => setForm({ ...form, marketingConsent: !!v })} />
+                <label htmlFor="consent" className="text-sm text-muted-foreground">
+                  I agree to be contacted about Wavo products, features, and research. You can opt out anytime.
+                </label>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" onClick={aiAssist} disabled={!form.fullName && !form.primaryArtist}>
+                  AI Assist — Prefill
+                </Button>
+                <Button type="submit" disabled={!canSubmit}>
+                  {submitting ? "Submitting…" : "Join Waitlist"}
+                </Button>
+                {error && <span className="text-destructive text-sm">{error}</span>}
+              </div>
+
+              {form.enriched && (
+                <div className="rounded-xl border p-3 text-xs">
+                  <div className="font-medium mb-1">Assistant reasoning</div>
+                  <div>Type guess: {form.enriched.typeGuess} ({Math.round((form.enriched.confidence || 0) * 100)}% conf)</div>
+                  <div>Manager guess: {form.enriched.managerGuess}</div>
+                  <div>Works: {form.enriched.notableWorks?.join(", ")}</div>
+                  <div>Provenance: {form.enriched.provenance?.join(" → ")}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Tabs defaultValue="privacy">
+            <TabsList>
+              <TabsTrigger value="privacy">Privacy</TabsTrigger>
+              <TabsTrigger value="learn">How we’ll use this</TabsTrigger>
+            </TabsList>
+            <TabsContent value="privacy" className="text-sm text-muted-foreground text-center">
+              We’ll only use your info to evaluate access and personalize your experience. We’ll never sell your data.
+            </TabsContent>
+            <TabsContent value="learn" className="text-sm text-muted-foreground text-center">
+              We connect this info to our music/IP graph and your connectors during onboarding to reduce setup friction and improve recommendations.
+            </TabsContent>
+          </Tabs>
+        </form>
+      </div>
+    </main>
   );
 }
