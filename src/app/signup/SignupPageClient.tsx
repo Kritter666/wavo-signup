@@ -1,6 +1,8 @@
+
 // src/app/signup/SignupPageClient.tsx
 "use client";
 
+import Brand from "@/components/Brand";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,19 +38,15 @@ type SignupPayload = {
   useCases: UseCase[];
   notes?: string;
   marketingConsent: boolean;
-
-  // auto-captured
   utmSource?: string | null;
   utmMedium?: string | null;
   utmCampaign?: string | null;
   referrer?: string | null;
-
-  // assistant enrichment (MVP dummy)
   enriched?: {
     typeGuess?: string;
     managerGuess?: string;
     notableWorks?: string[];
-    confidence?: number; // 0..1
+    confidence?: number;
     provenance?: string[];
   };
 };
@@ -94,14 +92,12 @@ export default function SignupPageClient() {
     referrer: typeof window !== "undefined" ? document.referrer || null : null,
   });
 
-  // Capture UTM params automatically
   useEffect(() => {
     setForm((f) => ({
       ...f,
       utmSource: sp.get("utm_source"),
       utmMedium: sp.get("utm_medium"),
       utmCampaign: sp.get("utm_campaign"),
-      // if ?email= is present, prefill email
       email: sp.get("email") ?? f.email,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +114,6 @@ export default function SignupPageClient() {
     });
   }
 
-  // ===== Dummy enrichment (no network) =====
   function aiAssist() {
     const subject = (form.primaryArtist || form.fullName || "").trim();
     if (!subject) return;
@@ -128,7 +123,6 @@ export default function SignupPageClient() {
     if (/records|label|entertainment|music group/i.test(form.org || "")) typeGuess = "Label";
     if (/producer|beat|mix|master/i.test(subject)) typeGuess = "Producer";
 
-    // toy enrichment based on name seeds
     const seeds: Record<string, { manager: string; works: string[] }> = {
       "dua lipa": { manager: "Wasserman (approx)", works: ["Levitating", "Houdini"] },
       "ed sheeran": { manager: "Stuart Camp (approx)", works: ["Shape of You", "Bad Habits"] },
@@ -142,19 +136,13 @@ export default function SignupPageClient() {
       managerGuess: hit?.manager || (typeGuess === "Producer" ? "TBD (producer mgmt?)" : "TBD"),
       notableWorks: hit?.works || (typeGuess === "Producer" ? ["Recent placements?"] : ["Top tracks?"]),
       confidence: hit ? 0.8 : 0.45,
-      provenance: [
-        "heuristic:name+org",
-        hit ? `seed:${key}` : "seed:none",
-        "future:web+internal graph",
-      ],
+      provenance: ["heuristic:name+org", hit ? `seed:${key}` : "seed:none", "future:web+internal graph"],
     };
 
     setForm((f) => ({
       ...f,
       role: enriched.typeGuess as Role,
-      notes:
-        (f.notes ? f.notes + "\n" : "") +
-        `Enriched: manager≈${enriched.managerGuess}; works≈${enriched.notableWorks?.join(", ")}`,
+      notes: (f.notes ? f.notes + "\n" : "") + `Enriched: manager≈${enriched.managerGuess}; works≈${enriched.notableWorks?.join(", ")}`,
       enriched,
     }));
   }
@@ -177,7 +165,6 @@ export default function SignupPageClient() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      // redirect to thank-you (keeps page logic simple and SSR-safe)
       router.push(`/thanks?email=${encodeURIComponent(form.email)}`);
     } catch (err: any) {
       setError(err?.message || "Submission failed");
@@ -188,10 +175,17 @@ export default function SignupPageClient() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      {/* Branded header */}
       <div className="mb-4">
-        <div className="text-2xl font-semibold">Join Wavo — early access</div>
-        <div className="text-sm text-muted-foreground">
-          Tell us who you are. We’ll personalize your workspace and keep you posted.
+        <div className="flex items-center justify-between">
+          <Brand className="h-6 text-foreground" />
+          <span className="text-xs text-muted-foreground">Signup</span>
+        </div>
+        <div className="mt-3">
+          <div className="text-2xl font-semibold">Wavo Signup</div>
+          <div className="text-sm text-muted-foreground">
+            Tell us who you are. We’ll personalize your workspace and keep you posted.
+          </div>
         </div>
       </div>
 
@@ -201,13 +195,10 @@ export default function SignupPageClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <div className="text-sm font-medium">Role</div>
-                <Select
-                  value={form.role}
-                  onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}
-                >
+                <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
                   <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                  {/* >>> change: force solid popover background */}
-                  <SelectContent className="bg-card text-foreground border border-border shadow-lg">
+                  {/* Make the dropdown solid in both themes */}
+                  <SelectContent className="bg-white dark:bg-neutral-900 border border-border shadow-lg">
                     {(["Artist", "Producer", "Manager", "Label", "Other"] as Role[]).map((r) => (
                       <SelectItem key={r} value={r}>{r}</SelectItem>
                     ))}
