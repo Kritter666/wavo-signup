@@ -50,13 +50,13 @@ export default function SignupForm() {
   return (
     <div className="w-full max-w-md card p-8 space-y-5">
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-black text-white grid place-items-center font-bold">W</div>
+        <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground grid place-items-center font-bold">W</div>
         <div className="font-semibold">Wavo</div>
-        <div className="ml-auto text-xs text-gray-500">Signup</div>
+        <div className="ml-auto text-xs text-muted-foreground">Signup</div>
       </div>
 
       <h2 className="text-xl font-semibold">Get started</h2>
-      <p className="text-sm text-gray-600">Tell us how to reach you. You can paste a referral code if you have one.</p>
+      <p className="text-sm text-muted-foreground">Tell us how to reach you. You can paste a referral code if you have one.</p>
 
       <form className="space-y-4" onSubmit={onSubmit}>
         <label className="label">Email

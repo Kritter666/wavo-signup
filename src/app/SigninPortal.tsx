@@ -62,7 +62,7 @@ export default function SigninPortal() {
           autoComplete="current-password"
           required
         />
-        <div className="mt-1 text-xs text-gray-500">Demo only — no real account is created.</div>
+        <div className="mt-1 text-xs text-muted-foreground">Demo only — no real account is created.</div>
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}

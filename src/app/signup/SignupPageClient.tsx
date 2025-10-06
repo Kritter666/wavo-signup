@@ -207,7 +207,7 @@ export default function SignupPageClient() {
                 >
                   <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                   {/* >>> change: force solid popover background */}
-                  <SelectContent className="bg-white dark:bg-neutral-900 border border-border shadow-lg">
+                  <SelectContent className="bg-card text-foreground border border-border shadow-lg">
                     {(["Artist", "Producer", "Manager", "Label", "Other"] as Role[]).map((r) => (
                       <SelectItem key={r} value={r}>{r}</SelectItem>
                     ))}
