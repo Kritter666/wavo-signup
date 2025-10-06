@@ -15,4 +15,3 @@
   .btn-primary { @apply bg-black text-white hover:bg-black/90 border-black; }
 }
 
-@import "./theme-carbon.css";
