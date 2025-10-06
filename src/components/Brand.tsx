@@ -1,16 +1,14 @@
 
 import * as React from "react";
 
-/** Minimal Wavo wordmark. Inherits current text color. */
-export default function Brand({
-  className = "h-10",
-}: { className?: string }) {
+/** Minimal Wavo wordmark. Always centers itself horizontally. */
+export default function Brand({ className = "h-10 mb-3" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 512 128"
       role="img"
       aria-label="Wavo"
-      className={className}
+      className={["block","mx-auto",className].join(" ")}   {/* <- block + mx-auto */}
     >
       <title>Wavo</title>
       <text

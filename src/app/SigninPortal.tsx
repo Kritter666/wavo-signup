@@ -19,7 +19,7 @@ export default function SigninPortal() {
     <main className="min-h-screen grid place-items-center px-4">
       <div className="w-full max-w-md rounded-2xl border bg-card text-card-foreground shadow p-8">
         <div className="text-center mb-6">
-          <Brand className="h-10 mx-auto mb-3" />
+          <Brand className="h-10 mb-3" />
           <h1 className="text-2xl font-semibold">Welcome</h1>
           <p className="text-sm text-muted-foreground mt-2">
             Log in to Wavo to continue to Wavo Cloud Platform.

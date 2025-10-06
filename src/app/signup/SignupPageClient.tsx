@@ -176,7 +176,7 @@ export default function SignupPageClient() {
     <main className="min-h-screen grid place-items-start md:place-items-center px-4 py-10">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-6">
-          <Brand className="h-10 mx-auto mb-3" />
+          <Brand className="h-10 mb-3" />
           <h2 className="text-2xl font-semibold">Wavo Signup</h2>
           <p className="text-sm text-muted-foreground">
             Tell us who you are. We’ll personalize your workspace and keep you posted.
