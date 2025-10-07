@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -115,12 +114,10 @@ export default function AssistantClient() {
     referrer: typeof window !== "undefined" ? document.referrer || null : null,
   });
 
-  // autoscroll when messages change
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // inject the current question
   useEffect(() => {
     const q = FLOW[qIndex];
     if (!q) return;
@@ -140,7 +137,6 @@ export default function AssistantClient() {
     setMessages(prev => [...prev, { from: "user", text: value || "(skipped)" }]);
     setInput("");
 
-    // update form
     if (q.id === "role")          setForm(f => ({ ...f, role: normalizeRole(value || "Other") }));
     if (q.id === "fullName" && value) setForm(f => ({ ...f, fullName: value }));
     if (q.id === "org")           setForm(f => ({ ...f, org: value }));
@@ -163,26 +159,20 @@ export default function AssistantClient() {
     }
 
     // submit
-    if (/^y(es)?/i.test(value) || value === "") {
-      try {
-        setSubmitting(true);
-        const res = await fetch("/api/signup", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        setMessages(prev => [...prev, { from: "assistant", text: "All set — thanks! Redirecting…" }]);
-        router.push(`/thanks?email=${encodeURIComponent(form.email)}`);
-      } catch (err: any) {
-        setMessages(prev => [...prev, { from: "assistant", text: `Submit failed: ${err?.message || "Unknown error"}` }]);
-      } finally {
-        setSubmitting(false);
-      }
-    } else {
-      // user typed a field name (e.g., "location") to jump back
-      const i = FLOW.findIndex(f => f.id === (value as QID));
-      if (i >= 0) setQIndex(i);
+    try {
+      setSubmitting(true);
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setMessages(prev => [...prev, { from: "assistant", text: "All set — thanks! Redirecting…" }]);
+      router.push(`/thanks?email=${encodeURIComponent(form.email)}`);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { from: "assistant", text: `Submit failed: ${err?.message || "Unknown error"}` }]);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -224,12 +214,7 @@ export default function AssistantClient() {
               </div>
             )}
             {FLOW[qIndex]?.id === "notes" ? (
-              <Textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                rows={3}
-                placeholder="Type your answer…"
-              />
+              <Textarea value={input} onChange={e => setInput(e.target.value)} rows={3} placeholder="Type your answer…" />
             ) : FLOW[qIndex]?.id === "consent" ? (
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -257,12 +242,8 @@ export default function AssistantClient() {
               <Button type="submit" disabled={!canContinue}>
                 {FLOW[qIndex]?.id === "review" ? (submitting ? "Submitting…" : "Submit") : "Continue"}
               </Button>
-              {qIndex > 0 && (
-                <Button type="button" variant="secondary" onClick={() => setQIndex(i => i - 1)}>Back</Button>
-              )}
-              {qIndex < FLOW.length - 1 && (
-                <Button type="button" variant="secondary" onClick={() => setQIndex(i => i + 1)}>Skip</Button>
-              )}
+              {qIndex > 0 && <Button type="button" variant="secondary" onClick={() => setQIndex(i => i - 1)}>Back</Button>}
+              {qIndex < FLOW.length - 1 && <Button type="button" variant="secondary" onClick={() => setQIndex(i => i + 1)}>Skip</Button>}
             </div>
           </form>
         </CardContent>

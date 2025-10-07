@@ -1,65 +1,54 @@
-
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Brand from "@/components/Brand";
 
 export default function SigninPortal() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function onContinue(e: React.FormEvent) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") || "");
-    // pass email down to signup for prefill
     router.push(`/signup/assistant?email=${encodeURIComponent(email)}`);
   }
 
   return (
-    <main className="min-h-screen grid place-items-center px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card text-card-foreground shadow p-8">
-        <div className="text-center mb-6">
-          <Brand className="h-10 mb-3" />
-          <h1 className="text-2xl font-semibold">Welcome</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Log in to Wavo to continue to Wavo Cloud Platform.
-          </p>
+    <form onSubmit={onContinue} className="w-full max-w-lg">
+      <div className="rounded-2xl border bg-card p-6 shadow-sm">
+        <h1 className="text-center font-black tracking-[0.35em] text-2xl leading-none">WAVO</h1>
+        <h2 className="mt-3 text-center text-2xl font-semibold">Welcome</h2>
+        <p className="mt-1 text-center text-sm text-muted-foreground">
+          Log in to Wavo to continue to Wavo Cloud Platform.
+        </p>
+
+        <label className="mt-5 block text-sm font-medium">Email</label>
+        <input
+          className="mt-1 w-full rounded-xl border bg-background px-3 py-2"
+          placeholder="you@label.com"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <label className="mt-4 block text-sm font-medium">Password</label>
+        <input
+          className="mt-1 w-full rounded-xl border bg-background px-3 py-2"
+          placeholder="Enter a password"
+          type="password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+        />
+
+        <div className="mt-3 text-center text-xs text-muted-foreground">
+          Demo only — no real account is created.
         </div>
 
-        <form onSubmit={onSubmit} className="grid gap-4">
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">Email</span>
-            <input
-              name="email"
-              type="email"
-              placeholder="you@label.com"
-              required
-              className="h-10 rounded-md border px-3 outline-none bg-background"
-            />
-          </label>
-
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">Password</span>
-            <input
-              name="password"
-              type="password"
-              placeholder="Enter a password"
-              className="h-10 rounded-md border px-3 outline-none bg-background"
-            />
-          </label>
-
-          <div className="mt-1 text-xs text-muted-foreground text-center">
-            Demo only — no real account is created.
-          </div>
-
-          <button
-            type="submit"
-            className="h-10 rounded-md bg-foreground text-background font-medium hover:opacity-90"
-          >
-            Continue
-          </button>
-        </form>
+        <button type="submit" className="mt-4 w-full rounded-xl bg-foreground px-4 py-2 text-background">
+          Continue
+        </button>
       </div>
-    </main>
+    </form>
   );
 }
