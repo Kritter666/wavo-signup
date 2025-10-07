@@ -1,4 +1,5 @@
-
+cat > src/app/signup/assistant/AssistantClient.tsx <<'TSX'
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -20,7 +21,7 @@ type UseCase =
 type StepType = "text" | "choice" | "connectors" | "review";
 
 type Step = {
-  id: keyof SignupAnswers | "useCases" | "connectors" | "review";
+  id: keyof SignupAnswers | "useCases" | "connectors" | "review" | "email";
   prompt: string;
   type: StepType;
   optional?: boolean;
@@ -28,6 +29,7 @@ type Step = {
   options?: string[];
   multi?: boolean;
   includeOther?: boolean;
+  validate?: (s: string) => string | null; // return error string or null
 };
 
 type SignupAnswers = {
@@ -69,38 +71,32 @@ const CONNECTORS: { key: string; label: string }[] = [
 function slug(s: string) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
+function isEmail(s: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 export default function AssistantClient() {
   const sp = useSearchParams();
   const router = useRouter();
   const emailFromURL = sp.get("email") ?? "";
 
-  // Message model
   type Msg = { role: "assistant" | "user"; text: string };
   const [msgs, setMsgs] = useState<Msg[]>([]);
 
-  // Answers store
   const [answers, setAnswers] = useState<SignupAnswers>(() => ({
     email: emailFromURL || undefined,
     marketingConsent: true,
   }));
-
-  // Connectors
   const [connect, setConnect] = useState<Record<string, boolean>>({});
-
-  // Step index
   const [i, setI] = useState(0);
-
-  // Text composer (for text steps + "Other")
   const [composer, setComposer] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const composerRef = useRef<HTMLInputElement | null>(null);
-
-  // Selected "Other" flag (opens input under choices)
   const [otherMode, setOtherMode] = useState(false);
 
-  // Build steps (use email from URL for display; still ask for name etc.)
-  const steps = useMemo<Step[]>(
-    () => [
+  // Steps — only include the email step if not already provided
+  const steps = useMemo<Step[]>(() => {
+    const base: Step[] = [
       {
         id: "role",
         prompt: "What best describes you?",
@@ -114,6 +110,17 @@ export default function AssistantClient() {
         type: "text",
         placeholder: "e.g., Alex Chen",
       },
+    ];
+    if (!emailFromURL) {
+      base.push({
+        id: "email",
+        prompt: "What’s your email?",
+        type: "text",
+        placeholder: "you@company.com",
+        validate: (s) => (!isEmail(s.trim()) ? "Please enter a valid email." : null),
+      });
+    }
+    base.push(
       {
         id: "org",
         prompt: "Which org / label / management are you with? (optional)",
@@ -152,73 +159,61 @@ export default function AssistantClient() {
         id: "review",
         prompt: "Thanks! Review and submit?",
         type: "review",
-      },
-    ],
-    []
-  );
+      }
+    );
+    return base;
+  }, [emailFromURL]);
 
-  // Show the current assistant prompt if not yet in msgs
+  // Add current prompt once
   useEffect(() => {
     const current = steps[i];
     if (!current) return;
-    const alreadyAsked = msgs.some((m) => m.role === "assistant" && m.text === current.prompt);
-    if (!alreadyAsked) {
-      setMsgs((m) => [...m, { role: "assistant", text: current.prompt }]);
-    }
+    const already = msgs.some((m) => m.role === "assistant" && m.text === current.prompt);
+    if (!already) setMsgs((m) => [...m, { role: "assistant", text: current.prompt }]);
   }, [i, steps, msgs]);
 
-  // Auto-focus for quick typing
+  // Focus
   useEffect(() => {
-    setTimeout(() => {
-      composerRef.current?.focus();
-    }, 0);
+    setTimeout(() => composerRef.current?.focus(), 0);
   }, [i, otherMode]);
 
   function next() {
     setI((x) => Math.min(x + 1, steps.length - 1));
     setComposer("");
+    setError(null);
     setOtherMode(false);
   }
 
   function back() {
     if (i === 0) return;
-    const current = steps[i - 1];
 
-    // Remove last user + last assistant question
+    // Remove the current assistant prompt (steps[i]) if present
     setMsgs((m) => {
-      const trimmed = [...m];
-      // Pop until we remove the last two bubbles (user & the question we’re stepping back to)
-      let removed = 0;
-      while (trimmed.length && removed < 1) {
-        const last = trimmed[trimmed.length - 1];
-        if (last.role === "user") removed++;
-        trimmed.pop();
+      const copy = [...m];
+      if (copy.length && copy[copy.length - 1].role === "assistant" && copy[copy.length - 1].text === steps[i].prompt) {
+        copy.pop();
       }
-      // Also remove the prompt for the current (we’ll re-add when re-entering)
-      // Remove last assistant message if it is exactly the current prompt
-      if (trimmed.length) {
-        const last = trimmed[trimmed.length - 1];
-        if (last.role === "assistant" && last.text === steps[i].prompt) {
-          trimmed.pop();
-        }
-      }
-      return trimmed;
-    });
-
-    // Clear the previous answer
-    setAnswers((a) => {
-      const copy = { ...a };
-      if (current.id in copy) {
-        // @ts-expect-error dynamic delete
-        delete copy[current.id];
+      // Remove the last user message (the answer to steps[i-1])
+      if (copy.length && copy[copy.length - 1].role === "user") {
+        copy.pop();
       }
       return copy;
     });
 
-    // If stepping back from connectors, clear that too
+    // Clear the stored answer for the previous step
+    const prevStep = steps[i - 1];
+    if (prevStep) {
+      setAnswers((a) => {
+        const clone: any = { ...a };
+        if (prevStep.id in clone) delete clone[prevStep.id];
+        return clone;
+      });
+    }
+    // If stepping back from connectors, clear those toggles
     if (steps[i].id === "connectors") setConnect({});
 
     setComposer("");
+    setError(null);
     setOtherMode(false);
     setI((x) => Math.max(0, x - 1));
   }
@@ -227,20 +222,18 @@ export default function AssistantClient() {
     setMsgs((m) => [...m, { role: "user", text }]);
   }
 
-  // ---- Choice (single / multi) ----
+  // Single / multi choice
   function chooseOption(opt: string) {
     const current = steps[i];
     if (current.multi) {
-      // toggle in multi-select (for useCases)
       setAnswers((a) => {
         const arr = Array.isArray(a.useCases) ? [...a.useCases] : [];
         const has = arr.includes(opt as UseCase);
         const nextArr = has ? arr.filter((x) => x !== (opt as UseCase)) : [...arr, opt as UseCase];
         return { ...a, useCases: nextArr };
       });
-      // for multi we don't auto-advance on each click; show selection as badge row
     } else {
-      // single select (e.g., role)
+      // role etc.
       setAnswers((a) => ({ ...a, [current.id]: opt as any }));
       submitUserBubble(opt);
       next();
@@ -251,15 +244,13 @@ export default function AssistantClient() {
     setOtherMode(true);
     setTimeout(() => composerRef.current?.focus(), 0);
   }
-
   function submitOther() {
     if (!composer.trim()) return;
     const current = steps[i];
     if (current.multi) {
       setAnswers((a) => {
         const arr = Array.isArray(a.useCases) ? [...a.useCases] : [];
-        const nextArr = [...arr, composer.trim() as UseCase];
-        return { ...a, useCases: nextArr };
+        return { ...a, useCases: [...arr, composer.trim() as UseCase] };
       });
       submitUserBubble(`Other: ${composer.trim()}`);
       setComposer("");
@@ -273,23 +264,37 @@ export default function AssistantClient() {
     }
   }
 
-  // ---- Text step ----
   function submitText() {
     const current = steps[i];
     const val = composer.trim();
-    if (!val && !current.optional) return; // require value if not optional
+
+    // validation (e.g., email)
+    if (current.validate) {
+      const err = current.validate(val);
+      if (err) {
+        setError(err);
+        return;
+      }
+    }
+
+    if (!val && !current.optional) return; // required
     if (!val && current.optional) {
-      // user pressed Enter on empty optional: skip
       submitUserBubble("(skipped)");
       next();
       return;
     }
-    setAnswers((a) => ({ ...a, [current.id]: val as any }));
+
+    // Save to answers
+    if (current.id === "email") {
+      setAnswers((a) => ({ ...a, email: val }));
+    } else {
+      setAnswers((a) => ({ ...a, [current.id]: val as any }));
+    }
     submitUserBubble(val);
     next();
   }
 
-  // ---- Connectors step ----
+  // Connectors
   function toggleConnector(k: string) {
     setConnect((m) => ({ ...m, [k]: !m[k] }));
   }
@@ -299,14 +304,14 @@ export default function AssistantClient() {
     next();
   }
 
-  // ---- Review -> Submit to /api/signup (reuse existing API) ----
+  // Final submit -> reuse /api/signup
   const readyToSubmit = i === steps.length - 1;
   async function submitAll() {
     try {
       const payload = {
         role: answers.role ?? "Artist",
         fullName: answers.fullName ?? "",
-        email: answers.email ?? "",
+        email: answers.email ?? emailFromURL ?? "",
         org: answers.org ?? "",
         primaryArtist: answers.primaryArtist ?? "",
         location: answers.location ?? "",
@@ -321,17 +326,13 @@ export default function AssistantClient() {
         utmMedium: sp.get("utm_medium"),
         utmCampaign: sp.get("utm_campaign"),
         referrer: typeof window !== "undefined" ? document.referrer || null : null,
-        enriched: {
-          typeGuess: answers.role ?? "Artist",
-          provenance: ["chat:mvp"],
-        },
+        enriched: { typeGuess: answers.role ?? "Artist", provenance: ["chat:mvp"] },
         derived: {
           subjectSlug: slug(answers.primaryArtist || answers.fullName || ""),
-          domain: (answers.email || "").split("@")[1]?.toLowerCase() || "",
+          domain: (answers.email || emailFromURL || "").split("@")[1]?.toLowerCase() || "",
         },
         connectors: Object.keys(connect).filter((k) => connect[k]),
       };
-      // Same endpoint your signup form uses:
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -344,14 +345,15 @@ export default function AssistantClient() {
     }
   }
 
-  // Handle Enter
+  // Keyboard: Enter continues
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const current = steps[i];
       if (current.type === "text") submitText();
-      if (current.type === "choice" && otherMode) submitOther();
-      if (current.type === "connectors") submitConnectors();
+      else if (current.type === "choice" && otherMode) submitOther();
+      else if (current.type === "choice" && current.multi && !otherMode) next();
+      else if (current.type === "connectors") submitConnectors();
     }
   }
 
@@ -384,14 +386,15 @@ export default function AssistantClient() {
               <div className="text-xs text-muted-foreground">
                 Step {i + 1} of {steps.length}
               </div>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-3">
+                {error && <span className="text-destructive text-xs">{error}</span>}
                 <Button variant="ghost" size="sm" onClick={back} disabled={i === 0}>
                   Back
                 </Button>
               </div>
             </div>
 
-            {/* Choice (single or multi) */}
+            {/* Choice */}
             {current.type === "choice" && (
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
@@ -399,9 +402,11 @@ export default function AssistantClient() {
                     <button
                       key={opt}
                       type="button"
-                      onClick={() => (opt === "Other" ? addOther() : chooseOption(opt))}
+                      onClick={() => (opt === "Other" ? setOtherMode(true) : chooseOption(opt))}
                       className={`px-3 py-2 border rounded-xl text-sm ${
-                        answers.useCases?.includes(opt as UseCase) ? "bg-muted" : "bg-card"
+                        Array.isArray(answers.useCases) && answers.useCases.includes(opt as UseCase)
+                          ? "bg-muted"
+                          : "bg-card"
                       }`}
                     >
                       {opt}
@@ -409,7 +414,7 @@ export default function AssistantClient() {
                   ))}
                 </div>
 
-                {current.multi && answers.useCases && answers.useCases.length > 0 && (
+                {current.multi && Array.isArray(answers.useCases) && answers.useCases.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {answers.useCases.map((uc) => (
                       <Badge key={uc} variant="outline">
@@ -429,8 +434,8 @@ export default function AssistantClient() {
                       placeholder="Type your answer… (Enter to save)"
                       className="h-10 w-full rounded-md border px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-600"
                     />
-                    <Button size="sm" onClick={submitOther}>
-                      Save
+                    <Button size="sm" onClick={() => (composer.trim() ? submitOther() : setOtherMode(false))}>
+                      {composer.trim() ? "Save" : "Cancel"}
                     </Button>
                   </div>
                 )}
@@ -451,17 +456,22 @@ export default function AssistantClient() {
                 <input
                   ref={composerRef}
                   value={composer}
-                  onChange={(e) => setComposer(e.target.value)}
+                  onChange={(e) => { setComposer(e.target.value); setError(null); }}
                   onKeyDown={onKeyDown}
                   placeholder={current.placeholder || "Type your answer…"}
                   className="h-10 w-full rounded-md border px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-600"
                 />
                 <div className="text-xs text-muted-foreground">
                   {current.optional
-                    ? "Optional — press Enter to skip or Continue."
+                    ? "Optional — press Enter to skip or click Continue."
                     : "Press Enter to continue."}
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  {current.optional && (
+                    <Button variant="ghost" size="sm" onClick={() => { submitUserBubble("(skipped)"); next(); }}>
+                      Skip
+                    </Button>
+                  )}
                   <Button size="sm" onClick={submitText}>
                     Continue
                   </Button>
@@ -480,7 +490,7 @@ export default function AssistantClient() {
                         connect[c.key] ? "bg-muted" : "bg-card"
                       }`}
                     >
-                      <Checkbox checked={!!connect[c.key]} onCheckedChange={() => toggleConnector(c.key)} />
+                      <Checkbox checked={!!connect[c.key]} onCheckedChange={() => setConnect((m)=>({ ...m, [c.key]: !m[c.key] }))} />
                       <span className="text-sm">{c.label}</span>
                     </label>
                   ))}
@@ -503,7 +513,7 @@ export default function AssistantClient() {
                   <div className="font-medium mb-1">Summary</div>
                   <div>Role: {answers.role || "-"}</div>
                   <div>Name: {answers.fullName || "-"}</div>
-                  <div>Email: {answers.email || "-"}</div>
+                  <div>Email: {answers.email || emailFromURL || "-"}</div>
                   <div>Org: {answers.org || "-"}</div>
                   <div>Primary Artist: {answers.primaryArtist || "-"}</div>
                   <div>Location: {answers.location || "-"}</div>
