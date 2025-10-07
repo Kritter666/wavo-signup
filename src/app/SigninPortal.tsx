@@ -1,54 +1,39 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function SigninPortal() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-
-  function onContinue(e: React.FormEvent) {
-    e.preventDefault();
-    router.push(`/signup/assistant?email=${encodeURIComponent(email)}`);
-  }
-
   return (
-    <form onSubmit={onContinue} className="w-full max-w-lg">
-      <div className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h1 className="text-center font-black tracking-[0.35em] text-2xl leading-none">WAVO</h1>
-        <h2 className="mt-3 text-center text-2xl font-semibold">Welcome</h2>
-        <p className="mt-1 text-center text-sm text-muted-foreground">
-          Log in to Wavo to continue to Wavo Cloud Platform.
-        </p>
+    <div className="w-full max-w-md">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="h-12 w-12 rounded-full bg-black text-white grid place-items-center font-black tracking-[0.18em]">W</div>
+            <h1 className="mt-2 font-black tracking-[0.35em] text-xl leading-none">WAVO</h1>
+            <div className="text-2xl font-semibold mt-2">Welcome back</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Sign in to continue to the signup assistant.
+            </p>
+          </div>
 
-        <label className="mt-5 block text-sm font-medium">Email</label>
-        <input
-          className="mt-1 w-full rounded-xl border bg-background px-3 py-2"
-          placeholder="you@label.com"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <label className="mt-4 block text-sm font-medium">Password</label>
-        <input
-          className="mt-1 w-full rounded-xl border bg-background px-3 py-2"
-          placeholder="Enter a password"
-          type="password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-        />
-
-        <div className="mt-3 text-center text-xs text-muted-foreground">
-          Demo only — no real account is created.
-        </div>
-
-        <button type="submit" className="mt-4 w-full rounded-xl bg-foreground px-4 py-2 text-background">
-          Continue
-        </button>
-      </div>
-    </form>
+          <form action="/signup" className="mt-5 grid gap-3">
+            <div className="grid gap-1">
+              <label className="text-sm font-medium">Email</label>
+              <Input name="email" type="email" placeholder="you@company.com" required />
+            </div>
+            <div className="grid gap-1">
+              <label className="text-sm font-medium">Password</label>
+              <Input name="password" type="password" placeholder="••••••••" required />
+            </div>
+            <Button type="submit" className="mt-1">Continue</Button>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Demo only — no real account is created.
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
