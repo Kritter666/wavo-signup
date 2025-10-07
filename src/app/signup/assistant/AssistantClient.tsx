@@ -1,294 +1,520 @@
-"use client";
+
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
 type Role = "Artist" | "Producer" | "Manager" | "Label" | "Other";
-type ConnectorKey = "instagram" | "spotify" | "youtube" | "tiktok" | "linkedin" | "meta_ads" | "google_ads";
+type UseCase =
+  | "Campaigns"
+  | "A&R Discovery"
+  | "Release Planning"
+  | "Creator Marketing"
+  | "Reporting/Analytics"
+  | "Rights/IP"
+  | "Other";
 
-const CONNECTORS: Array<{ key: ConnectorKey; name: string; category: string }> = [
-  { key: "instagram", name: "Instagram", category: "Social" },
-  { key: "spotify", name: "Spotify", category: "Streaming" },
-  { key: "youtube", name: "YouTube", category: "Streaming" },
-  { key: "tiktok", name: "TikTok", category: "Social" },
-  { key: "linkedin", name: "LinkedIn", category: "Social" },
-  { key: "meta_ads", name: "Meta Ads", category: "Ads" },
-  { key: "google_ads", name: "Google Ads", category: "Ads" },
+type StepType = "text" | "choice" | "connectors" | "review";
+
+type Step = {
+  id: keyof SignupAnswers | "useCases" | "connectors" | "review";
+  prompt: string;
+  type: StepType;
+  optional?: boolean;
+  placeholder?: string;
+  options?: string[];
+  multi?: boolean;
+  includeOther?: boolean;
+};
+
+type SignupAnswers = {
+  role?: Role;
+  fullName?: string;
+  email?: string;
+  org?: string;
+  primaryArtist?: string;
+  location?: string;
+  website?: string;
+  instagram?: string;
+  spotify?: string;
+  soundcloud?: string;
+  useCases?: UseCase[];
+  notes?: string;
+  marketingConsent?: boolean;
+};
+
+const USE_CASES: UseCase[] = [
+  "Campaigns",
+  "A&R Discovery",
+  "Release Planning",
+  "Creator Marketing",
+  "Reporting/Analytics",
+  "Rights/IP",
+  "Other",
 ];
 
-type QID = "role" | "fullName" | "email" | "connectors" | "review";
+const CONNECTORS: { key: string; label: string }[] = [
+  { key: "instagram", label: "Instagram" },
+  { key: "youtube", label: "YouTube" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "spotify", label: "Spotify for Artists" },
+  { key: "apple_music", label: "Apple Music for Artists" },
+  { key: "meta", label: "Meta Ads" },
+  { key: "google_ads", label: "Google Ads" },
+];
 
-type Step = { id: QID; prompt: string; required?: boolean };
-
-type Form = {
-  role: Role;
-  fullName: string;
-  email: string;
-  connectors: ConnectorKey[];
-  marketingConsent: boolean;
-};
-
-const defaultForm: Form = {
-  role: "Artist",
-  fullName: "",
-  email: "",
-  connectors: [],
-  marketingConsent: true,
-};
-
-type CState = "off" | "connecting" | "on";
-const defaultConn: Record<ConnectorKey, CState> = {
-  instagram: "off",
-  spotify: "off",
-  youtube: "off",
-  tiktok: "off",
-  linkedin: "off",
-  meta_ads: "off",
-  google_ads: "off",
-};
-
-function Chip({ children, active, onClick }: { children: React.ReactNode; active?: boolean; onClick?: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-full border text-sm transition ${active ? "bg-foreground text-background" : "bg-background hover:bg-muted"}`}
-    >
-      {children}
-    </button>
-  );
+function slug(s: string) {
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 export default function AssistantClient() {
   const sp = useSearchParams();
   const router = useRouter();
-  const listRef = useRef<HTMLDivElement>(null);
+  const emailFromURL = sp.get("email") ?? "";
 
-  const emailFromQuery = sp.get("email") ?? "";
-  const STEPS: Step[] = [
-    { id: "role", prompt: "What best describes you? (tap an option)" },
-    { id: "fullName", prompt: "Great. What’s your full name?", required: true },
-    // if email was passed via query, we’ll still show it so they can confirm or edit
-    { id: "email", prompt: "What’s your email?", required: true },
-    { id: "connectors", prompt: "Optional: connect any sources you use.", required: false },
-    { id: "review", prompt: "Review & submit.", required: true },
-  ];
+  // Message model
+  type Msg = { role: "assistant" | "user"; text: string };
+  const [msgs, setMsgs] = useState<Msg[]>([]);
 
-  const [form, setForm] = useState<Form>({ ...defaultForm, email: emailFromQuery || "" });
-  const [connState, setConnState] = useState<Record<ConnectorKey, CState>>({ ...defaultConn });
-  const [qIndex, setQIndex] = useState(0);
-  const [input, setInput] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  // Answers store
+  const [answers, setAnswers] = useState<SignupAnswers>(() => ({
+    email: emailFromURL || undefined,
+    marketingConsent: true,
+  }));
 
-  // Build chat from steps up to current index
-  const messages = useMemo(() => {
-    const out: Array<{ from: "assistant" | "user"; text: string }> = [];
-    for (let i = 0; i <= qIndex; i++) {
-      const s = STEPS[i];
-      out.push({ from: "assistant", text: s.prompt });
-      if (i < qIndex) {
-        const ans = summaryFor(s.id);
-        if (ans) out.push({ from: "user", text: ans });
-      }
-    }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [STEPS, qIndex, form, connState]);
+  // Connectors
+  const [connect, setConnect] = useState<Record<string, boolean>>({});
 
+  // Step index
+  const [i, setI] = useState(0);
+
+  // Text composer (for text steps + "Other")
+  const [composer, setComposer] = useState("");
+  const composerRef = useRef<HTMLInputElement | null>(null);
+
+  // Selected "Other" flag (opens input under choices)
+  const [otherMode, setOtherMode] = useState(false);
+
+  // Build steps (use email from URL for display; still ask for name etc.)
+  const steps = useMemo<Step[]>(
+    () => [
+      {
+        id: "role",
+        prompt: "What best describes you?",
+        type: "choice",
+        options: ["Artist", "Producer", "Manager", "Label", "Other"],
+        includeOther: true,
+      },
+      {
+        id: "fullName",
+        prompt: "Great — what’s your name?",
+        type: "text",
+        placeholder: "e.g., Alex Chen",
+      },
+      {
+        id: "org",
+        prompt: "Which org / label / management are you with? (optional)",
+        type: "text",
+        optional: true,
+        placeholder: "e.g., Atlantic Records",
+      },
+      {
+        id: "primaryArtist",
+        prompt: "Who is your primary artist / subject? (optional)",
+        type: "text",
+        optional: true,
+        placeholder: "e.g., Metro Boomin",
+      },
+      {
+        id: "location",
+        prompt: "Where are you based? (optional)",
+        type: "text",
+        optional: true,
+        placeholder: "City, Country",
+      },
+      {
+        id: "useCases",
+        prompt: "How can we help? Pick one or more.",
+        type: "choice",
+        options: USE_CASES,
+        multi: true,
+        includeOther: true,
+      },
+      {
+        id: "connectors",
+        prompt: "Want to connect any sources now? (optional — you can skip)",
+        type: "connectors",
+      },
+      {
+        id: "review",
+        prompt: "Thanks! Review and submit?",
+        type: "review",
+      },
+    ],
+    []
+  );
+
+  // Show the current assistant prompt if not yet in msgs
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+    const current = steps[i];
+    if (!current) return;
+    const alreadyAsked = msgs.some((m) => m.role === "assistant" && m.text === current.prompt);
+    if (!alreadyAsked) {
+      setMsgs((m) => [...m, { role: "assistant", text: current.prompt }]);
+    }
+  }, [i, steps, msgs]);
 
-  function summaryFor(id: QID): string | null {
-    switch (id) {
-      case "role": return form.role || null;
-      case "fullName": return form.fullName || null;
-      case "email": return form.email || null;
-      case "connectors": {
-        const on = Object.entries(connState).filter(([, v]) => v === "on").map(([k]) => CONNECTORS.find(c => c.key === k)?.name).filter(Boolean) as string[];
-        return on.length ? `Connected: ${on.join(", ")}` : "(skipped)";
+  // Auto-focus for quick typing
+  useEffect(() => {
+    setTimeout(() => {
+      composerRef.current?.focus();
+    }, 0);
+  }, [i, otherMode]);
+
+  function next() {
+    setI((x) => Math.min(x + 1, steps.length - 1));
+    setComposer("");
+    setOtherMode(false);
+  }
+
+  function back() {
+    if (i === 0) return;
+    const current = steps[i - 1];
+
+    // Remove last user + last assistant question
+    setMsgs((m) => {
+      const trimmed = [...m];
+      // Pop until we remove the last two bubbles (user & the question we’re stepping back to)
+      let removed = 0;
+      while (trimmed.length && removed < 1) {
+        const last = trimmed[trimmed.length - 1];
+        if (last.role === "user") removed++;
+        trimmed.pop();
       }
-      case "review": return null;
+      // Also remove the prompt for the current (we’ll re-add when re-entering)
+      // Remove last assistant message if it is exactly the current prompt
+      if (trimmed.length) {
+        const last = trimmed[trimmed.length - 1];
+        if (last.role === "assistant" && last.text === steps[i].prompt) {
+          trimmed.pop();
+        }
+      }
+      return trimmed;
+    });
+
+    // Clear the previous answer
+    setAnswers((a) => {
+      const copy = { ...a };
+      if (current.id in copy) {
+        // @ts-expect-error dynamic delete
+        delete copy[current.id];
+      }
+      return copy;
+    });
+
+    // If stepping back from connectors, clear that too
+    if (steps[i].id === "connectors") setConnect({});
+
+    setComposer("");
+    setOtherMode(false);
+    setI((x) => Math.max(0, x - 1));
+  }
+
+  function submitUserBubble(text: string) {
+    setMsgs((m) => [...m, { role: "user", text }]);
+  }
+
+  // ---- Choice (single / multi) ----
+  function chooseOption(opt: string) {
+    const current = steps[i];
+    if (current.multi) {
+      // toggle in multi-select (for useCases)
+      setAnswers((a) => {
+        const arr = Array.isArray(a.useCases) ? [...a.useCases] : [];
+        const has = arr.includes(opt as UseCase);
+        const nextArr = has ? arr.filter((x) => x !== (opt as UseCase)) : [...arr, opt as UseCase];
+        return { ...a, useCases: nextArr };
+      });
+      // for multi we don't auto-advance on each click; show selection as badge row
+    } else {
+      // single select (e.g., role)
+      setAnswers((a) => ({ ...a, [current.id]: opt as any }));
+      submitUserBubble(opt);
+      next();
     }
   }
 
-  function next() { setQIndex((i) => Math.min(STEPS.length - 1, i + 1)); }
-
-  function goBack() {
-    const newIdx = Math.max(0, qIndex - 1);
-    clearAfter(newIdx);
-    setQIndex(newIdx);
+  function addOther() {
+    setOtherMode(true);
+    setTimeout(() => composerRef.current?.focus(), 0);
   }
 
-  // Clear answers AFTER idx so Back “erases” later steps
-  function clearAfter(idx: number) {
-    const after = STEPS.slice(idx + 1).map(s => s.id);
-    setForm((f) => {
-      const nf = { ...f };
-      if (after.includes("review")) { /* nothing specific to keep */ }
-      if (after.includes("connectors")) {
-        nf.connectors = [];
-      }
-      if (after.includes("email")) nf.email = "";
-      if (after.includes("fullName")) nf.fullName = "";
-      if (after.includes("role")) nf.role = "Artist";
-      return nf;
-    });
-    if (after.includes("connectors")) setConnState({ ...defaultConn });
+  function submitOther() {
+    if (!composer.trim()) return;
+    const current = steps[i];
+    if (current.multi) {
+      setAnswers((a) => {
+        const arr = Array.isArray(a.useCases) ? [...a.useCases] : [];
+        const nextArr = [...arr, composer.trim() as UseCase];
+        return { ...a, useCases: nextArr };
+      });
+      submitUserBubble(`Other: ${composer.trim()}`);
+      setComposer("");
+      setOtherMode(false);
+    } else {
+      setAnswers((a) => ({ ...a, [current.id]: composer.trim() as any }));
+      submitUserBubble(composer.trim());
+      setComposer("");
+      setOtherMode(false);
+      next();
+    }
   }
 
-  function pickRole(r: Role) { setForm((f) => ({ ...f, role: r })); }
-
-  function connect(k: ConnectorKey) {
-    setConnState((m) => ({ ...m, [k]: "connecting" }));
-    setTimeout(() => {
-      setConnState((m) => ({ ...m, [k]: "on" }));
-      setForm((f) => ({ ...f, connectors: Array.from(new Set([...f.connectors, k])) as ConnectorKey[] }));
-    }, 600);
-  }
-  function disconnect(k: ConnectorKey) {
-    setConnState((m) => ({ ...m, [k]: "off" }));
-    setForm((f) => ({ ...f, connectors: f.connectors.filter(x => x !== k) as ConnectorKey[] }));
-  }
-
-  function canContinue(): boolean {
-    const s = STEPS[qIndex];
-    if (!s?.required) return !submitting;
-    if (s.id === "fullName") return !!form.fullName && !submitting;
-    if (s.id === "email") return !!form.email && !submitting;
-    if (s.id === "review") return !!form.fullName && !!form.email && !submitting;
-    return !submitting;
+  // ---- Text step ----
+  function submitText() {
+    const current = steps[i];
+    const val = composer.trim();
+    if (!val && !current.optional) return; // require value if not optional
+    if (!val && current.optional) {
+      // user pressed Enter on empty optional: skip
+      submitUserBubble("(skipped)");
+      next();
+      return;
+    }
+    setAnswers((a) => ({ ...a, [current.id]: val as any }));
+    submitUserBubble(val);
+    next();
   }
 
-  async function submit() {
+  // ---- Connectors step ----
+  function toggleConnector(k: string) {
+    setConnect((m) => ({ ...m, [k]: !m[k] }));
+  }
+  function submitConnectors() {
+    const selected = Object.keys(connect).filter((k) => connect[k]);
+    submitUserBubble(selected.length ? `Connected: ${selected.join(", ")}` : "(skipped)");
+    next();
+  }
+
+  // ---- Review -> Submit to /api/signup (reuse existing API) ----
+  const readyToSubmit = i === steps.length - 1;
+  async function submitAll() {
     try {
-      setSubmitting(true);
+      const payload = {
+        role: answers.role ?? "Artist",
+        fullName: answers.fullName ?? "",
+        email: answers.email ?? "",
+        org: answers.org ?? "",
+        primaryArtist: answers.primaryArtist ?? "",
+        location: answers.location ?? "",
+        website: answers.website ?? "",
+        instagram: answers.instagram ?? "",
+        spotify: answers.spotify ?? "",
+        soundcloud: answers.soundcloud ?? "",
+        useCases: answers.useCases ?? [],
+        notes: "",
+        marketingConsent: true,
+        utmSource: sp.get("utm_source"),
+        utmMedium: sp.get("utm_medium"),
+        utmCampaign: sp.get("utm_campaign"),
+        referrer: typeof window !== "undefined" ? document.referrer || null : null,
+        enriched: {
+          typeGuess: answers.role ?? "Artist",
+          provenance: ["chat:mvp"],
+        },
+        derived: {
+          subjectSlug: slug(answers.primaryArtist || answers.fullName || ""),
+          domain: (answers.email || "").split("@")[1]?.toLowerCase() || "",
+        },
+        connectors: Object.keys(connect).filter((k) => connect[k]),
+      };
+      // Same endpoint your signup form uses:
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/thanks?email=${encodeURIComponent(form.email)}`);
+      router.push(`/thanks?email=${encodeURIComponent(payload.email)}`);
     } catch (e: any) {
-      alert(e?.message || "Submit failed");
-    } finally {
-      setSubmitting(false);
+      alert(e?.message || "Submission failed");
     }
   }
 
-  return (
-    <div className="w-full max-w-2xl">
-      <Card>
-        <CardContent className="p-4 sm:p-6">
-          <div className="text-center mb-3">
-            <h1 className="text-center font-black tracking-[0.35em] text-xl sm:text-2xl leading-none">WAVO</h1>
-            <div className="text-2xl font-semibold mt-2">Let’s get you set up</div>
-            <div className="text-sm text-muted-foreground">
-              Tap choices or type. Back erases the next answers. I’ll personalize your workspace.
-            </div>
-          </div>
+  // Handle Enter
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const current = steps[i];
+      if (current.type === "text") submitText();
+      if (current.type === "choice" && otherMode) submitOther();
+      if (current.type === "connectors") submitConnectors();
+    }
+  }
 
-          <div ref={listRef} className="h-[360px] overflow-y-auto rounded-lg border p-3 bg-background/30">
-            {messages.map((m, i) => (
-              <div key={i} className={`max-w-[85%] mb-2 ${m.from === "assistant" ? "mr-auto" : "ml-auto"}`}>
-                <div className={`rounded-2xl px-3 py-2 text-sm border ${m.from === "assistant" ? "bg-card" : "bg-primary text-primary-foreground"}`}>
-                  {m.text}
-                </div>
+  const current = steps[i];
+
+  return (
+    <div className="w-full max-w-3xl">
+      <Card>
+        <CardContent className="p-4">
+          {/* Transcript */}
+          <div className="space-y-2 mb-3 max-h-[55vh] overflow-auto pr-1">
+            {msgs.map((m, idx) => (
+              <div
+                key={idx}
+                className={`rounded-2xl p-3 shadow text-sm max-w-[85%] ${
+                  m.role === "assistant"
+                    ? "bg-muted"
+                    : "bg-primary text-primary-foreground ml-auto"
+                }`}
+              >
+                {m.text}
               </div>
             ))}
-
-            {/* Inline controls for CURRENT step only */}
-            <div className="mt-3 space-y-3">
-              {STEPS[qIndex]?.id === "role" && (
-                <div className="flex flex-wrap gap-2">
-                  {(["Artist","Producer","Manager","Label"] as Role[]).map((r) => (
-                    <Chip key={r} active={form.role === r} onClick={() => pickRole(r)}>{r}</Chip>
-                  ))}
-                  <span className="text-xs text-muted-foreground">You can also type a custom role below.</span>
-                </div>
-              )}
-
-              {STEPS[qIndex]?.id === "connectors" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {CONNECTORS.map((c) => {
-                    const st = connState[c.key];
-                    return (
-                      <div key={c.key} className="border rounded-xl p-3 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{c.category}</div>
-                        </div>
-                        {st === "off" && <Button size="sm" variant="secondary" onClick={() => connect(c.key)}>Connect</Button>}
-                        {st === "connecting" && <Badge variant="outline">Connecting…</Badge>}
-                        {st === "on" && (
-                          <div className="flex items-center gap-2">
-                            <Badge>Connected</Badge>
-                            <Button size="sm" variant="ghost" onClick={() => disconnect(c.key)}>Disconnect</Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="text-[11px] text-muted-foreground mt-3">Step {qIndex + 1} / {STEPS.length}</div>
           </div>
 
-          {/* Typed inputs for steps that need them */}
-          <div className="mt-3 grid gap-2">
-            {STEPS[qIndex]?.id === "role" && (
-              <Input
-                value={form.role === "Other" ? "" : ""}
-                onChange={() => {}}
-                placeholder='(Optional) type a custom role like "A&R", then press Continue'
-              />
-            )}
-            {STEPS[qIndex]?.id === "fullName" && (
-              <Input
-                value={form.fullName}
-                onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-                placeholder="Type your full name…"
-              />
-            )}
-            {STEPS[qIndex]?.id === "email" && (
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="you@company.com"
-              />
-            )}
-
+          {/* Composer */}
+          <div className="rounded-xl border p-3 space-y-2">
+            {/* Step header + Back */}
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                onClick={() => {
-                  const s = STEPS[qIndex];
-                  if (s.id === "role" && form.role === "Other") {
-                    // If they typed nothing, keep Other; else leave as-is
-                  }
-                  if (s.id === "review") return submit();
-                  next();
-                }}
-                disabled={!canContinue()}
-              >
-                {STEPS[qIndex]?.id === "review" ? (submitting ? "Submitting…" : "Submit") : "Continue"}
-              </Button>
-
-              {qIndex > 0 && (
-                <Button type="button" variant="secondary" onClick={goBack}>Back</Button>
-              )}
-              {qIndex < STEPS.length - 1 && (
-                <Button type="button" variant="secondary" onClick={() => next()}>Skip</Button>
-              )}
+              <div className="text-xs text-muted-foreground">
+                Step {i + 1} of {steps.length}
+              </div>
+              <div className="ml-auto">
+                <Button variant="ghost" size="sm" onClick={back} disabled={i === 0}>
+                  Back
+                </Button>
+              </div>
             </div>
+
+            {/* Choice (single or multi) */}
+            {current.type === "choice" && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {current.options?.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => (opt === "Other" ? addOther() : chooseOption(opt))}
+                      className={`px-3 py-2 border rounded-xl text-sm ${
+                        answers.useCases?.includes(opt as UseCase) ? "bg-muted" : "bg-card"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+
+                {current.multi && answers.useCases && answers.useCases.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {answers.useCases.map((uc) => (
+                      <Badge key={uc} variant="outline">
+                        {uc}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {otherMode && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={composerRef}
+                      value={composer}
+                      onChange={(e) => setComposer(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      placeholder="Type your answer… (Enter to save)"
+                      className="h-10 w-full rounded-md border px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-600"
+                    />
+                    <Button size="sm" onClick={submitOther}>
+                      Save
+                    </Button>
+                  </div>
+                )}
+
+                {current.multi && (
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={next}>
+                      Continue
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Text */}
+            {current.type === "text" && (
+              <div className="space-y-2">
+                <input
+                  ref={composerRef}
+                  value={composer}
+                  onChange={(e) => setComposer(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder={current.placeholder || "Type your answer…"}
+                  className="h-10 w-full rounded-md border px-3 text-sm text-gray-900 dark:text-white placeholder:text-gray-600"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {current.optional
+                    ? "Optional — press Enter to skip or Continue."
+                    : "Press Enter to continue."}
+                </div>
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={submitText}>
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Connectors */}
+            {current.type === "connectors" && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {CONNECTORS.map((c) => (
+                    <label
+                      key={c.key}
+                      className={`flex items-center gap-2 rounded-xl border p-2 cursor-pointer ${
+                        connect[c.key] ? "bg-muted" : "bg-card"
+                      }`}
+                    >
+                      <Checkbox checked={!!connect[c.key]} onCheckedChange={() => toggleConnector(c.key)} />
+                      <span className="text-sm">{c.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setConnect({}); submitConnectors(); }}>
+                    Skip
+                  </Button>
+                  <Button size="sm" onClick={submitConnectors}>
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Review */}
+            {current.type === "review" && (
+              <div className="space-y-2">
+                <div className="rounded-xl border p-3 text-xs">
+                  <div className="font-medium mb-1">Summary</div>
+                  <div>Role: {answers.role || "-"}</div>
+                  <div>Name: {answers.fullName || "-"}</div>
+                  <div>Email: {answers.email || "-"}</div>
+                  <div>Org: {answers.org || "-"}</div>
+                  <div>Primary Artist: {answers.primaryArtist || "-"}</div>
+                  <div>Location: {answers.location || "-"}</div>
+                  <div>Use cases: {(answers.useCases || []).join(", ") || "-"}</div>
+                  <div>Connectors: {Object.keys(connect).filter((k)=>connect[k]).join(", ") || "-"}</div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={submitAll}>Submit</Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
