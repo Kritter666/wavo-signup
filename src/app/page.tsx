@@ -1,4 +1,3 @@
-
 import SigninPortal from "./SigninPortal";
 
 export const dynamic = "force-dynamic";
