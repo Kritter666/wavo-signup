@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +12,7 @@ export default function SigninPortal() {
           <div className="flex flex-col items-center text-center">
             <div className="h-12 w-12 rounded-full bg-black text-white grid place-items-center font-black tracking-[0.18em]">W</div>
             <h1 className="mt-2 font-black tracking-[0.35em] text-xl leading-none">WAVO</h1>
-            <div className="text-2xl font-semibold mt-2">Welcome back</div>
+            <div className="text-2xl font-semibold mt-2">Welcome</div>
             <p className="text-sm text-muted-foreground mt-1">
               Sign in to continue to the signup assistant.
             </p>
