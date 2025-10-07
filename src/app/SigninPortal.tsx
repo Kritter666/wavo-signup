@@ -1,39 +1,74 @@
+
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SigninPortal() {
-  return (
-    <div className="w-full max-w-md">
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col items-center text-center">
-            <div className="h-12 w-12 rounded-full bg-black text-white grid place-items-center font-black tracking-[0.18em]">W</div>
-            <h1 className="mt-2 font-black tracking-[0.35em] text-xl leading-none">WAVO</h1>
-            <div className="text-2xl font-semibold mt-2">Welcome</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Sign in to continue to the signup assistant.
-            </p>
-          </div>
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
 
-          <form action="/signup" className="mt-5 grid gap-3">
-            <div className="grid gap-1">
-              <label className="text-sm font-medium">Email</label>
-              <Input name="email" type="email" placeholder="you@company.com" required />
-            </div>
-            <div className="grid gap-1">
-              <label className="text-sm font-medium">Password</label>
-              <Input name="password" type="password" placeholder="••••••••" required />
-            </div>
-            <Button type="submit" className="mt-1">Continue</Button>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Demo only — no real account is created.
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    router.push(`/signup?email=${encodeURIComponent(email)}`);
+  }
+
+  return (
+    <main className="min-h-screen grid place-items-center p-6">
+      <div className="w-full max-w-sm bg-card border rounded-xl p-6 shadow-sm">
+        {/* Brand block (centered) */}
+        <div className="flex flex-col items-center gap-2 mb-3">
+          <div className="h-10 w-10 rounded-full bg-black text-white grid place-items-center font-bold">W</div>
+          <div className="text-xl font-semibold tracking-wide">WAVO</div>
+        </div>
+
+        <h1 className="text-lg font-semibold text-center">Wavo Signup</h1>
+        <p className="text-sm text-muted-foreground text-center mb-4">
+          Sign in to continue to signup.
+        </p>
+
+        <form onSubmit={onSubmit} className="grid gap-3">
+          <label className="grid gap-1">
+            <span className="text-sm font-medium">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+              className="h-10 w-full rounded-md border px-3 text-sm
+                         text-gray-900 dark:text-white
+                         placeholder:text-gray-700 dark:placeholder:text-gray-400"
+            />
+          </label>
+
+          <label className="grid gap-1">
+            <span className="text-sm font-medium">Password</span>
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder="••••••••"
+              className="h-10 w-full rounded-md border px-3 text-sm
+                         text-gray-900 dark:text-white
+                         placeholder:text-gray-700 dark:placeholder:text-gray-400"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="w-full h-10 rounded-md border bg-foreground text-background text-sm font-medium"
+          >
+            Continue
+          </button>
+
+          <div className="mt-1 text-xs text-muted-foreground text-center">
+            Demo only — no real account is created.
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }
