@@ -1,74 +1,69 @@
-
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Brand from "@/components/Brand";
 
 export default function SigninPortal() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    router.push(`/signup?email=${encodeURIComponent(email)}`);
-  }
-
   return (
-    <main className="min-h-screen grid place-items-center p-6">
-      <div className="w-full max-w-sm bg-card border rounded-xl p-6 shadow-sm">
-        {/* Brand block (centered) */}
-        <div className="flex flex-col items-center gap-2 mb-3">
-          <div className="h-10 w-10 rounded-full bg-black text-white grid place-items-center font-bold">W</div>
-          <div className="text-xl font-semibold tracking-wide">WAVO</div>
+    <div className="w-full max-w-md">
+      <div className="flex items-center justify-center mb-6">
+        <div className="h-10 w-10 rounded-full bg-black text-white grid place-items-center font-bold">W</div>
+      </div>
+
+      <div className="text-center mb-2">
+        <h1 className="text-2xl font-semibold">Welcome</h1>
+        <div className="mt-1 flex items-center justify-center gap-2">
+          <Brand className="h-6" />
+        </div>
+      </div>
+
+      <form
+        className="mt-6 grid gap-3 rounded-xl border p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget as HTMLFormElement;
+          const email = (form.elements.namedItem("email") as HTMLInputElement)?.value || "";
+          // go straight to /signup and pass email through so we don't ask again
+          window.location.href = `/signup?email=${encodeURIComponent(email)}`;
+        }}
+      >
+        <div className="grid gap-1.5">
+          <label htmlFor="email" className="text-sm font-medium">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            // 👇 darker input text + darker placeholder
+            className="h-11 w-full rounded-md border px-3 text-[15px] text-gray-900 placeholder:text-gray-600 dark:text-white dark:placeholder:text-gray-400"
+            placeholder="you@company.com"
+          />
         </div>
 
-        <h1 className="text-lg font-semibold text-center">Wavo Signup</h1>
-        <p className="text-sm text-muted-foreground text-center mb-4">
-          Sign in to continue to signup.
-        </p>
+        <div className="grid gap-1.5">
+          <label htmlFor="password" className="text-sm font-medium">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            // 👇 darker input text + darker placeholder
+            className="h-11 w-full rounded-md border px-3 text-[15px] text-gray-900 placeholder:text-gray-600 dark:text-white dark:placeholder:text-gray-400"
+            placeholder="Enter password"
+          />
+        </div>
 
-        <form onSubmit={onSubmit} className="grid gap-3">
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">Email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="h-10 w-full rounded-md border px-3 text-sm
-                         text-gray-900 dark:text-white
-                         placeholder:text-gray-700 dark:placeholder:text-gray-400"
-            />
-          </label>
+        <button
+          type="submit"
+          className="mt-1 h-10 rounded-md border px-4 font-medium hover:bg-gray-50 active:opacity-90"
+        >
+          Continue
+        </button>
 
-          <label className="grid gap-1">
-            <span className="text-sm font-medium">Password</span>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="••••••••"
-              className="h-10 w-full rounded-md border px-3 text-sm
-                         text-gray-900 dark:text-white
-                         placeholder:text-gray-700 dark:placeholder:text-gray-400"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="w-full h-10 rounded-md border bg-foreground text-background text-sm font-medium"
-          >
-            Continue
-          </button>
-
-          <div className="mt-1 text-xs text-muted-foreground text-center">
-            Demo only — no real account is created.
-          </div>
-        </form>
-      </div>
-    </main>
+        <div className="mt-1 text-xs text-gray-500">
+          Demo only — no real account is created.
+        </div>
+      </form>
+    </div>
   );
 }
