@@ -12,7 +12,7 @@ export default function SigninPortal() {
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("email") || "");
     // pass email down to signup for prefill
-    router.push(`/signup?email=${encodeURIComponent(email)}`);
+    router.push(`/signup/assistant?email=${encodeURIComponent(email)}`);
   }
 
   return (
